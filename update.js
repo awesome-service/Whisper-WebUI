@@ -9,10 +9,7 @@ module.exports = {
     {
       method: "shell.run",
       params: {
-        message: [
-          "git reset --hard HEAD",
-          "git checkout -f origin/feature/add-api",
-        ],
+        message: ["git reset --hard HEAD"],
         path: "app",
       },
     },
