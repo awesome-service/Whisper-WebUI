@@ -7,7 +7,7 @@ module.exports = ({ appName = "Whisper-WebUI" }) => ({
         venv: "env", // Edit this to customize the venv folder path
         env: {}, // Edit this to customize environment variables (see documentation)
         path: appName, // Edit this to customize the path to start the shell from
-        message: ["uvicorn backend.main:app --host 0.0.0.0 --port 8001"],
+        message: "uvicorn backend.main:app --host 0.0.0.0 --port 8001",
         on: [
           {
             // The regular expression pattern to monitor.
@@ -29,6 +29,7 @@ module.exports = ({ appName = "Whisper-WebUI" }) => ({
         env: {}, // Edit this to customize environment variables (see documentation)
         path: appName, // Edit this to customize the path to start the shell from
         message: [
+          // "uvicorn backend.main:app --host 0.0.0.0 --port 8001", // Edit with your custom commands
           "python app.py --inbrowser False", // Edit with your custom commands
         ],
         on: [
