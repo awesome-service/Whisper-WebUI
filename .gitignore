@@ -14,3 +14,4 @@ configs/default_parameters.yaml
 __pycache__/
 /env
 backend/records.db
+backend/cache
