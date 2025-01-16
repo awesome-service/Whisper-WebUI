@@ -22,8 +22,8 @@ module.exports = {
         venv: "env",
         path: "",
         message: [
-          "pip install -r requirements.txt",
-          "pip install -r backend/requirements-backend.txt",
+          "uv pip install -r requirements.txt",
+          "uv pip install -r backend/requirements-backend.txt",
         ],
       },
     },
