@@ -4,7 +4,7 @@ import ctranslate2
 import gradio as gr
 import torchaudio
 from abc import ABC, abstractmethod
-from typing import BinaryIO, Union, Tuple, List
+from typing import BinaryIO, Union, Tuple, List, Callable
 import numpy as np
 from datetime import datetime
 from faster_whisper.vad import VadOptions
@@ -61,6 +61,7 @@ class BaseTranscriptionPipeline(ABC):
     def transcribe(self,
                    audio: Union[str, BinaryIO, np.ndarray],
                    progress: gr.Progress = gr.Progress(),
+                   progress_callback: Optional[Callable] = None,
                    *whisper_params,
                    ):
         """Inference whisper model to transcribe"""
@@ -80,6 +81,7 @@ class BaseTranscriptionPipeline(ABC):
             progress: gr.Progress = gr.Progress(),
             file_format: str = "SRT",
             add_timestamp: bool = True,
+            progress_callback: Optional[Callable] = None,
             *pipeline_params,
             ) -> Tuple[List[Segment], float]:
         """
@@ -98,6 +100,9 @@ class BaseTranscriptionPipeline(ABC):
             Subtitle file format between ["SRT", "WebVTT", "txt", "lrc"]
         add_timestamp: bool
             Whether to add a timestamp at the end of the filename.
+        progress_callback: Optional[Callable]
+            callback function to show progress. Can be used to update progress in the backend.
+
         *pipeline_params: tuple
             Parameters for the transcription pipeline. This will be dealt with "TranscriptionPipelineParams" data class.
             This must be provided as a List with * wildcard because of the integration with gradio.
@@ -167,6 +172,7 @@ class BaseTranscriptionPipeline(ABC):
         result, elapsed_time_transcription = self.transcribe(
             audio,
             progress,
+            progress_callback,
             *whisper_params.to_list()
         )
         if whisper_params.enable_offload:
@@ -269,6 +275,7 @@ class BaseTranscriptionPipeline(ABC):
                     progress,
                     file_format,
                     add_timestamp,
+                    None,
                     *pipeline_params,
                 )
 
@@ -309,8 +316,6 @@ class BaseTranscriptionPipeline(ABC):
 
         except Exception as e:
             raise RuntimeError(f"Error transcribing file: {e}") from e
-        finally:
-            self.release_cuda_memory()
 
     def transcribe_mic(self,
                        mic_audio: str,
@@ -354,6 +359,7 @@ class BaseTranscriptionPipeline(ABC):
                 progress,
                 file_format,
                 add_timestamp,
+                None,
                 *pipeline_params,
             )
             progress(1, desc="Completed!")
@@ -372,8 +378,6 @@ class BaseTranscriptionPipeline(ABC):
             return result_str, file_path
         except Exception as e:
             raise RuntimeError(f"Error transcribing mic: {e}") from e
-        finally:
-            self.release_cuda_memory()
 
     def transcribe_youtube(self,
                            youtube_link: str,
@@ -420,6 +424,7 @@ class BaseTranscriptionPipeline(ABC):
                 progress,
                 file_format,
                 add_timestamp,
+                None,
                 *pipeline_params,
             )
 
@@ -444,8 +449,6 @@ class BaseTranscriptionPipeline(ABC):
 
         except Exception as e:
             raise RuntimeError(f"Error transcribing youtube: {e}") from e
-        finally:
-            self.release_cuda_memory()
 
     def get_compute_type(self):
         if "float16" in self.available_compute_types:
@@ -467,7 +470,12 @@ class BaseTranscriptionPipeline(ABC):
             del self.model
             self.model = None
         if self.device == "cuda":
-            self.release_cuda_memory()
+            torch.cuda.empty_cache()
+            torch.cuda.reset_max_memory_allocated()
+        if self.device == "xpu":
+            torch.xpu.empty_cache()
+            torch.xpu.reset_accumulated_memory_stats()
+            torch.xpu.reset_peak_memory_stats()
         gc.collect()
 
     @staticmethod
@@ -501,6 +509,8 @@ class BaseTranscriptionPipeline(ABC):
     def get_device():
         if torch.cuda.is_available():
             return "cuda"
+        if torch.xpu.is_available():
+            return "xpu"
         elif torch.backends.mps.is_available():
             if not BaseTranscriptionPipeline.is_sparse_api_supported():
                 # Device `SparseMPS` is not supported for now. See : https://github.com/pytorch/pytorch/issues/87886
@@ -525,13 +535,6 @@ class BaseTranscriptionPipeline(ABC):
             return True
         except RuntimeError:
             return False
-
-    @staticmethod
-    def release_cuda_memory():
-        """Release memory"""
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            torch.cuda.reset_max_memory_allocated()
 
     @staticmethod
     def remove_input_files(file_paths: List[str]):
