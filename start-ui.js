@@ -9,7 +9,7 @@ module.exports = ({ appName = "Whisper-WebUI" }) => ({
         path: appName, // Edit this to customize the path to start the shell from
         message: [
           // "uvicorn backend.main:app --host 0.0.0.0 --port 8001", // Edit with your custom commands
-          "python app.py --inbrowser False", // Edit with your custom commands
+          "python app.py --inbrowser False --server_port 42004",
         ],
         on: [
           {
