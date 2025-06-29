@@ -10,6 +10,7 @@ services:
       # Similarly, all output files will be stored in the `./outputs` directory.
       - ./models:/Whisper-WebUI/models
       - ./outputs:/Whisper-WebUI/outputs
+      - ./configs:/Whisper-WebUI/configs
 
     ports:
       - "7860:7860"
@@ -21,6 +22,7 @@ services:
 
     # If you're not using nvidia GPU, Update device to match yours.
     # See more info at : https://docs.docker.com/compose/compose-file/deploy/#driver
+    # You can remove the entire `deploy' section if you are using CPU.
     deploy:
       resources:
         reservations:
